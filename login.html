@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    @property --hue { syntax: "<number>"; inherits: true; initial-value: 0; }
+    @property --rotate { syntax: "<number>"; inherits: true; initial-value: 0; }
+    @property --bg-y { syntax: "<number>"; inherits: true; initial-value: 0; }
+    @property --bg-x { syntax: "<number>"; inherits: true; initial-value: 50; }
+    @property --glow-translate-y { syntax: "<number>"; inherits: true; initial-value: -65; }
+    @property --bg-size { syntax: "<number>"; inherits: true; initial-value: 1; }
+    @property --glow-opacity { syntax: "<number>"; inherits: true; initial-value: 1; }
+    @property --glow-blur { syntax: "<number>"; inherits: true; initial-value: 6; }
+    @property --glow-scale { syntax: "<number>"; inherits: true; initial-value: 1.5; }
+    @property --glow-radius { syntax: "<number>"; inherits: true; initial-value: 100; }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #06090f;
+      --card-radius: 22px;
+      --animation-speed: 4s;
+      --interaction-speed: 0.55s;
+      --hue-speed: 1;
+      --scale-factor: 1;
+      --glow-rotate-unit: 1deg;
+      --text: #e8eaf6;
+      --muted: rgba(200,210,255,0.5);
+      --accent: #a5b4fc;
+      --input-bg: rgba(255,255,255,0.07);
+      --input-border: rgba(255,255,255,0.16);
+      --input-focus: rgba(160,180,255,0.55);
+    }
+
+    html, body {
+      min-height: 100%;
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    canvas { position: fixed; inset: 0; z-index: 0; }
+
+    .page {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 2rem 1.5rem;
+    }
+
+    /* ── Glow border container ── */
+    .glow-container {
+      --bg-size: 1; --hue: 0; --rotate: 0;
+      --glow-scale: 1.5; --scale-factor: 1;
+      --glow-blur: 6; --glow-opacity: 1; --glow-radius: 100;
+      position: relative; width: 100%; max-width: 500px;
+      border-radius: var(--card-radius);
+      display: flex; align-items: flex-start; justify-content: center;
+      animation: fadeUp .65s cubic-bezier(.22,1,.36,1) both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .glow-container:before {
+      content: ""; display: block; position: absolute;
+      inset: -2px; border-radius: calc(var(--card-radius) + 2px); z-index: 0;
+      background: hsl(0deg 0% 10%) radial-gradient(
+        40% 40% at calc(var(--bg-x) * 1%) calc(var(--bg-y) * 1%),
+        hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 80%) calc(0% * var(--bg-size)),
+        hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 65%) calc(25% * var(--bg-size)),
+        hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 45%) calc(50% * var(--bg-size)),
+        transparent 100%
+      );
+      animation: hue-animation var(--animation-speed) linear infinite,
+                 rotate-bg var(--animation-speed) linear infinite;
+    }
+
+    .glow {
+      --glow-translate-y: -65;
+      display: block; position: absolute;
+      width: 90px; height: 90px;
+      animation: rotate var(--animation-speed) linear infinite;
+      transform: rotateZ(calc(var(--rotate) * var(--glow-rotate-unit)));
+      transform-origin: center;
+      border-radius: calc(var(--glow-radius) * 10vw);
+      z-index: 0; pointer-events: none;
+    }
+
+    .glow:after {
+      content: ""; display: block; z-index: -1;
+      filter: blur(calc(var(--glow-blur) * 10px));
+      width: 130%; height: 130%; left: -15%; top: -15%;
+      background: hsl(calc(var(--hue) * var(--hue-speed) * 1deg) 100% 60%);
+      position: relative;
+      border-radius: calc(var(--glow-radius) * 10vw);
+      animation: hue-animation var(--animation-speed) linear infinite;
+      transform: scaleY(calc(var(--glow-scale) * var(--scale-factor) / 1.1))
+                 scaleX(calc(var(--glow-scale) * var(--scale-factor) * 1.2))
+                 translateY(calc(var(--glow-translate-y) * 1%));
+      opacity: var(--glow-opacity);
+    }
+
+    .glow-container:hover .glow {
+      --glow-blur: 1.5; --glow-opacity: 0.6; --glow-scale: 2.5;
+      --glow-radius: 0; --rotate: 900; --glow-rotate-unit: 0;
+      --scale-factor: 1.25; animation-play-state: paused;
+    }
+
+    .glow-container:hover .glow:after {
+      animation-play-state: paused;
+      transition: --glow-blur 0.05s ease, --glow-opacity 0.05s ease,
+                  --glow-scale 0.05s ease, --glow-radius 0.05s ease;
+    }
+
+    /* ── Card ── */
+    .card {
+      position: relative; z-index: 1; width: 100%;
+      background: rgba(8, 10, 20, 0.85);
+      border-radius: calc(var(--card-radius) - 1px);
+      padding: 2.6rem 2.6rem 2.2rem;
+      backdrop-filter: blur(28px) saturate(1.5);
+      -webkit-backdrop-filter: blur(28px) saturate(1.5);
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 30px 80px rgba(0,0,0,0.7);
+    }
+
+    /* ── Header ── */
+    .card-header {
+      text-align: center;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-header .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(165,180,252,0.12); border: 1px solid rgba(165,180,252,0.25);
+      border-radius: 50px; padding: 4px 14px;
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+      color: var(--accent); text-transform: uppercase; margin-bottom: 1rem;
+    }
+
+    .card h1 {
+      font-size: 1.85rem; font-weight: 700;
+      letter-spacing: -0.02em; margin-bottom: 0.35rem;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .card .subtitle {
+      font-size: 0.85rem; color: var(--muted); margin-bottom: 1.8rem;
+    }
+
+    /* ── Field ── */
+    .field { position: relative; margin-bottom: 1rem; }
+
+    .field label {
+      display: block; font-size: 0.75rem; font-weight: 600;
+      letter-spacing: 0.05em; color: var(--muted);
+      text-transform: uppercase; margin-bottom: 0.4rem; padding-left: 0.3rem;
+    }
+
+    .field input {
+      width: 100%; padding: 0.8rem 2.8rem 0.8rem 1.1rem;
+      background: var(--input-bg); border: 1px solid var(--input-border);
+      border-radius: 12px; color: var(--text); font-family: inherit;
+      font-size: 0.92rem; outline: none;
+      transition: border-color .25s, box-shadow .25s, background .25s;
+    }
+
+    .field input::placeholder { color: rgba(200,210,255,0.3); }
+
+    .field input:focus {
+      border-color: var(--input-focus);
+      box-shadow: 0 0 0 3px rgba(160,180,255,0.12);
+      background: rgba(255,255,255,0.09);
+    }
+
+    .field .icon {
+      position: absolute; right: 1rem; bottom: 0.82rem;
+      color: var(--muted); pointer-events: none;
+      display: flex; align-items: center;
+    }
+
+    /* hint text below fields */
+    .hint { font-size: 0.75rem; padding: 0 0.3rem; margin-top: 4px; min-height: 16px; }
+    .hint.error { color: #ff6b8a; }
+    .hint.ok    { color: #06d6a0; }
+
+    /* ── Remember me / Forgot row ── */
+    .remember-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin: 0.2rem 0 1.4rem; font-size: 0.82rem;
+    }
+
+    .remember-row label {
+      display: flex; align-items: center; gap: 0.45rem;
+      color: var(--muted); cursor: pointer; font-size: 0.82rem;
+      font-weight: 400; letter-spacing: 0; text-transform: none;
+      padding-left: 0;
+    }
+
+    .remember-row label input[type="checkbox"] {
+      accent-color: var(--accent); width: 13px; height: 13px;
+    }
+
+    .remember-row a {
+      color: var(--accent); font-size: 0.82rem;
+      text-decoration: none; transition: opacity .2s;
+    }
+    .remember-row a:hover { opacity: 0.75; text-decoration: underline; }
+
+    /* ── Login button ── */
+    .btn-login {
+      width: 100%; padding: 0.92rem;
+      background: linear-gradient(135deg, #a5b4fc 0%, #818cf8 50%, #6366f1 100%);
+      color: #ffffff; border: none; border-radius: 12px;
+      font-family: inherit; font-size: 1rem; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.01em;
+      transition: transform .18s, box-shadow .18s;
+      box-shadow: 0 4px 24px rgba(99,102,241,0.4);
+      position: relative; overflow: hidden;
+    }
+
+    .btn-login::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15), transparent);
+      opacity: 0; transition: opacity .2s;
+    }
+
+    .btn-login:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(99,102,241,0.55); }
+    .btn-login:hover::after { opacity: 1; }
+    .btn-login:active { transform: translateY(0); }
+
+    /* ── Divider ── */
+    .divider {
+      display: flex; align-items: center; gap: 0.8rem;
+      margin: 1.2rem 0; font-size: 0.78rem; color: var(--muted);
+    }
+    .divider::before, .divider::after {
+      content: ''; flex: 1; height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+
+    /* ── Footer ── */
+    .footer-text { text-align: center; font-size: 0.85rem; color: var(--muted); }
+    .footer-text a { color: var(--text); font-weight: 600; text-decoration: none; }
+    .footer-text a:hover { color: var(--accent); }
+
+    /* ── Keyframes ── */
+    @keyframes rotate-bg {
+      0%   { --bg-x: 0;   --bg-y: 0;   }
+      25%  { --bg-x: 100; --bg-y: 0;   }
+      50%  { --bg-x: 100; --bg-y: 100; }
+      75%  { --bg-x: 0;   --bg-y: 100; }
+      100% { --bg-x: 0;   --bg-y: 0;   }
+    }
+
+    @keyframes rotate {
+      from { --rotate: -70;            --glow-translate-y: -65; }
+      to   { --rotate: calc(360 - 70); --glow-translate-y: -65; }
+    }
+
+    @keyframes hue-animation {
+      0%   { --hue: 0;   }
+      100% { --hue: 360; }
+    }
+
+    @media (max-width: 480px) {
+      .card { padding: 2rem 1.5rem 1.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="page">
+  <div class="glow-container">
+    <span class="glow"></span>
+
+    <div class="card">
+
+      <!-- Header -->
+      <div class="card-header">
+        <div class="badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          Sign In
+        </div>
+        <h1>Welcome back!</h1>
+        <p class="subtitle">Enter your credentials to continue</p>
+      </div>
+
+      <!-- Username -->
+      <div class="field">
+        <label>Username or Email</label>
+        <input type="text" id="username" placeholder="johndoe99 or john@example.com" autocomplete="username" />
+        <span class="icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </span>
+        <p class="hint" id="hint-username"></p>
+      </div>
+
+      <!-- Password -->
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Your password" autocomplete="current-password" />
+        <span class="icon" id="toggle-pass" onclick="togglePassword()" style="cursor:pointer; pointer-events:all;">
+          <svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+          </svg>
+        </span>
+        <p class="hint" id="hint-password"></p>
+      </div>
+
+      <!-- Remember me + Forgot -->
+      <div class="remember-row">
+        <label><input type="checkbox" id="remember" /> Remember me</label>
+        <a href="#">Forgot Password?</a>
+      </div>
+
+      <!-- Login button -->
+      <button class="btn-login" onclick="handleLogin()">Sign In</button>
+
+      <div class="divider">or</div>
+
+      <p class="footer-text">Don't have an account? <a href="register.html">Register</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ── Starfield ── */
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  function rand(min, max) { return Math.random() * (max - min) + min; }
+
+  function createParticles() {
+    particles = [];
+    const count = Math.floor((W * H) / 4800);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: rand(0,W), y: rand(0,H), r: rand(0.4,2.8),
+        alpha: rand(0.3,1), speed: rand(0.04,0.22), drift: rand(-0.07,0.07),
+        twinkleSpeed: rand(0.005,0.018), twinkleDir: Math.random()>.5?1:-1,
+        shape: Math.random()>.88?'cross':'circle',
+      });
+    }
+  }
+
+  function drawCross(x,y,r,alpha) {
+    ctx.save(); ctx.globalAlpha=alpha*.85; ctx.strokeStyle='#c8d0ff';
+    ctx.lineWidth=r*.55; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(x-r*2.2,y); ctx.lineTo(x+r*2.2,y);
+    ctx.moveTo(x,y-r*2.2); ctx.lineTo(x,y+r*2.2);
+    ctx.stroke(); ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,W,H);
+    const g = ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,Math.max(W,H)*.8);
+    g.addColorStop(0,'#0e1425'); g.addColorStop(.5,'#080c15'); g.addColorStop(1,'#04060b');
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+    const n1 = ctx.createRadialGradient(W*.65,H*.3,0,W*.65,H*.3,W*.4);
+    n1.addColorStop(0,'rgba(80,60,180,0.07)'); n1.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=n1; ctx.fillRect(0,0,W,H);
+
+    const n2 = ctx.createRadialGradient(W*.2,H*.75,0,W*.2,H*.75,W*.32);
+    n2.addColorStop(0,'rgba(30,70,180,0.06)'); n2.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=n2; ctx.fillRect(0,0,W,H);
+
+    for (const p of particles) {
+      p.alpha += p.twinkleSpeed * p.twinkleDir;
+      if (p.alpha>=1)   { p.alpha=1;   p.twinkleDir=-1; }
+      if (p.alpha<=.12) { p.alpha=.12; p.twinkleDir=1;  }
+      p.y -= p.speed; p.x += p.drift;
+      if (p.y<-5)   p.y=H+5;
+      if (p.x<-5)   p.x=W+5;
+      if (p.x>W+5)  p.x=-5;
+      if (p.shape==='cross') {
+        drawCross(p.x,p.y,p.r,p.alpha);
+      } else {
+        if (p.r>1.5) {
+          const gl = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*5);
+          gl.addColorStop(0,`rgba(190,205,255,${p.alpha*.3})`); gl.addColorStop(1,'rgba(0,0,0,0)');
+          ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*5,0,Math.PI*2); ctx.fill();
+        }
+        ctx.globalAlpha=p.alpha;
+        ctx.fillStyle=p.r>1.8?'#c8d4ff':'#ffffff';
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1;
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+
+  resize(); createParticles(); draw();
+  window.addEventListener('resize', ()=>{ resize(); createParticles(); });
+
+  /* ── Toggle password visibility ── */
+  function togglePassword() {
+    const inp = document.getElementById('password');
+    const isHidden = inp.type === 'password';
+    inp.type = isHidden ? 'text' : 'password';
+    document.getElementById('eye-icon').outerHTML = isHidden
+      ? `<svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+      : `<svg id="eye-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
+  }
+
+  /* ── Hint helper ── */
+  function setHint(id, msg, type) {
+    const el = document.getElementById('hint-' + id);
+    el.textContent = msg;
+    el.className = 'hint ' + (type || '');
+  }
+
+  /* ── Login handler ── */
+  function handleLogin() {
+    let ok = true;
+
+    const user = document.getElementById('username').value.trim();
+    if (!user) { setHint('username', 'Please enter your username or email', 'error'); ok = false; }
+    else setHint('username', '✓', 'ok');
+
+    const pass = document.getElementById('password').value;
+    if (!pass) { setHint('password', 'Please enter your password', 'error'); ok = false; }
+    else setHint('password', '✓', 'ok');
+
+    if (!ok) return;
+
+    const btn = document.querySelector('.btn-login');
+    btn.textContent = '✓ Signed In!';
+    btn.style.background = 'linear-gradient(135deg,#06d6a0,#0ba678)';
+    btn.style.boxShadow = '0 8px 32px rgba(6,214,160,0.4)';
+    btn.disabled = true;
+  }
+</script>
+</body>
+</html>
